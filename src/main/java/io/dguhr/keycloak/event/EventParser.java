@@ -53,6 +53,9 @@ public class EventParser {
         String evtUserType = getEventUserType();
         String evtUserId   = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId();
         String evtObjectId = getEventObjectName();
+        String evtOrgId = findOrgIdOfUserId(evtUserId);
+
+        LOG.debug("ROLE ID FOR USER IN EVENT IS: " + evtOrgId);
 
         // Check if the type (objectType) and object (userType) is present in the authorization model
         // So far, every relation between the type and the object is UNIQUE
@@ -157,6 +160,13 @@ public class EventParser {
         return session.getContext().getRealm().getRoleById(roleId).getName();
     }
 
+    public String findOrgIdOfUserId(String userId) {
+        LOG.debug("Finding org_id for userId: " + userId);
+        String orgId = session.users().getUserById(session.getContext().getRealm(), userId).getFirstAttribute("org_id");
+        LOG.debug("Found org_id: " + orgId +" for userId: " + userId);
+
+        return orgId;
+    }
     public String toString()
     {
         StringBuilder sb = new StringBuilder();
