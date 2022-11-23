@@ -1,10 +1,10 @@
-package io.embesozzi.keycloak.event;
+package io.dguhr.keycloak.event;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.embesozzi.keycloak.model.*;
+import io.dguhr.keycloak.model.*;
 import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakSession;
@@ -95,7 +95,7 @@ public class EventParser {
     public String getEventOperation() {
         switch (event.getOperationType()) {
             case CREATE:
-                return OpenFgaTupleEvent.OPERATION_WRITES;
+                return OpenFgaTupleEvent.OPERATION_WRITES; // update?!?!?
             case DELETE:
                 return OpenFgaTupleEvent.OPERATION_DELETES;
             default:

@@ -1,9 +1,8 @@
-package io.embesozzi.keycloak.model;
+package io.dguhr.keycloak.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
-import java.util.Optional;
 
 public class AuthorizationModel {
     @JsonProperty("type_definitions")
@@ -20,7 +19,7 @@ public class AuthorizationModel {
     public TypeDefinition filterByType(String type) {
             return this.getTypeDefinitions().stream()
                     .filter(c -> c.getType().equals(type))
-                    .findFirst().get();
+                    .findFirst().orElse(null);
     }
 
     public List<TypeDefinition> getTypeDefinitions() {

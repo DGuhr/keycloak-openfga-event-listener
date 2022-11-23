@@ -1,5 +1,4 @@
 FROM quay.io/keycloak/keycloak:19.0.2 as builder
-LABEL maintainer="embesozzi@gmail.com"
 
 ENV KC_DB=postgres
 ENV KC_HTTP_RELATIVE_PATH=/auth

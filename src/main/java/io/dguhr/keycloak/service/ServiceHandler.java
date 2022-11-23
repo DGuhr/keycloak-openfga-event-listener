@@ -1,4 +1,4 @@
-package io.embesozzi.keycloak.service;
+package io.dguhr.keycloak.service;
 
 import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;

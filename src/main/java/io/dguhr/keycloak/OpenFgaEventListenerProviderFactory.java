@@ -1,11 +1,11 @@
-package io.embesozzi.keycloak;
+package io.dguhr.keycloak;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.embesozzi.keycloak.model.AuthorizationModel;
-import io.embesozzi.keycloak.service.ServiceHandler;
-import io.embesozzi.keycloak.service.ServiceHandlerFactory;
+import io.dguhr.keycloak.model.AuthorizationModel;
+import io.dguhr.keycloak.service.ServiceHandler;
+import io.dguhr.keycloak.service.ServiceHandlerFactory;
 import org.keycloak.Config.Scope;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerProviderFactory;
