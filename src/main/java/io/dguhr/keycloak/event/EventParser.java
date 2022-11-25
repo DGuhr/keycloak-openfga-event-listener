@@ -55,7 +55,7 @@ public class EventParser {
         String evtObjectId = getEventObjectName();
         String evtOrgId = findOrgIdOfUserId(evtUserId);
 
-        LOG.debug("ROLE ID FOR USER IN EVENT IS: " + evtOrgId);
+        LOG.debug("ORG ID FOR USER IN EVENT IS: " + evtOrgId);
 
         // Check if the type (objectType) and object (userType) is present in the authorization model
         // So far, every relation between the type and the object is UNIQUE
