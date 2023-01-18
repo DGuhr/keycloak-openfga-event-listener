@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakSession;
 import io.grpc.ManagedChannel;
+import org.keycloak.utils.StringUtil;
 
 public class SpiceDbEventParser {
 
@@ -90,13 +91,15 @@ public class SpiceDbEventParser {
     public String getEventObjectType() {
         switch (event.getResourceType()) {
             //remove roles from the game for now. TODO: check if wanted.
+            //case user: write user relation to spicedb.
             /*case REALM_ROLE_MAPPING:
             case REALM_ROLE:
                 return OBJECT_TYPE_ROLE;*/
             case GROUP_MEMBERSHIP:
                 return OBJECT_TYPE_GROUP;
             default:
-                throw new IllegalArgumentException("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
+                logger.info("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
+                return "";
         }
     }
 

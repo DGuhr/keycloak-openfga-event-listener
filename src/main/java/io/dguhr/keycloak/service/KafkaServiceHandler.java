@@ -14,7 +14,7 @@ import java.util.concurrent.TimeoutException;
 import org.jboss.logging.Logger;
 
 public class KafkaServiceHandler extends ServiceHandler {
-    private static final Logger LOG = Logger.getLogger(KafkaServiceHandler.class);
+    private static final Logger logger = Logger.getLogger(KafkaServiceHandler.class);
     private Producer<String, String> producer;
 
     public KafkaServiceHandler(KeycloakSession session, Config.Scope config){
@@ -29,11 +29,11 @@ public class KafkaServiceHandler extends ServiceHandler {
 
     @Override
     public void handle(String eventId, String eventValue) throws ExecutionException, InterruptedException, TimeoutException {
-        LOG.debug("[SpiceDbEventListener] Kafka producer is sending event id: " + eventId + " with value: " + eventValue + " to topic: " + getAdminTopic());
+        logger.info("[SpiceDbEventListener] Kafka producer is sending event id: " + eventId + " with value: " + eventValue + " to topic: " + getAdminTopic());
         ProducerRecord<String, String> record = new ProducerRecord<>(getAdminTopic(), eventId, eventValue);
         Future<RecordMetadata> metaData = producer.send(record);
         RecordMetadata recordMetadata = metaData.get(30, TimeUnit.SECONDS);
-        LOG.debug("[SpiceDbEventListener] Received new metadata. \n" +
+        logger.info("[SpiceDbEventListener] Received new metadata. \n" +
                 "Topic:" + recordMetadata.topic() + "\n" +
                 "Partition: " + recordMetadata.partition() + "\n" +
                 "Key:" + record.key() + "\n" +
