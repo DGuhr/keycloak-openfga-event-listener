@@ -16,7 +16,6 @@ import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakSession;
 import io.grpc.ManagedChannel;
-import org.keycloak.utils.StringUtil;
 
 public class SpiceDbEventParser {
 
@@ -28,19 +27,17 @@ public class SpiceDbEventParser {
     public static final String OBJECT_TYPE_GROUP = "group";
 
     private AdminEvent event;
-    private ObjectMapper mapper;
     private KeycloakSession session;
 
     private static final Logger logger = Logger.getLogger(SpiceDbEventParser.class);
 
     public SpiceDbEventParser(AdminEvent event){
         this.event = event;
-        this.mapper = new ObjectMapper();
     }
+
     public SpiceDbEventParser(AdminEvent event, KeycloakSession session){
         this.event = event;
         this.session = session;
-        this.mapper = new ObjectMapper();
     }
 
     /***
@@ -64,10 +61,10 @@ public class SpiceDbEventParser {
 
         logger.info("[SpiceDbEventListener] TYPE OF EVENT IS: " + event.getResourceTypeAsString());
         logger.info("[SpiceDbEventListener] ORG ID FOR USER IN EVENT IS: " + evtOrgId);
-        logger.info("[SpiceDbEventListener] EVENTS object type IS: " + evtObjType);
+        logger.info("[SpiceDbEventListener] EVENTS definition IS: " + evtObjType);
         logger.info("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
         logger.info("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
-        logger.info("[SpiceDbEventListener] EVENTS onbject ID IS: " + evtObjectId);
+        logger.info("[SpiceDbEventListener] EVENTS group value ID IS: " + evtObjectId);
         logger.info("[SpiceDbEventListener] EVENT represantation is: " + event.getRepresentation());
 
         //TODO use the spicedb client
@@ -91,7 +88,7 @@ public class SpiceDbEventParser {
     public String getEventObjectType() {
         switch (event.getResourceType()) {
             //remove roles from the game for now. TODO: check if wanted.
-            //case user: write user relation to spicedb.
+            //case user: write user relation to spicedb. at best when assuming org_id = context then write orgid/user:value
             /*case REALM_ROLE_MAPPING:
             case REALM_ROLE:
                 return OBJECT_TYPE_ROLE;*/
