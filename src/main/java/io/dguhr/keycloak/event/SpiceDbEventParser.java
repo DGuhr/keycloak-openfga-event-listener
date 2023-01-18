@@ -104,7 +104,7 @@ public class SpiceDbEventParser {
     }
 
     public String findOrgIdOfUserId(String userId) {
-        logger.debug("Finding org_id for userId: " + userId);
+        logger.debug("Searching org_id for userId: " + userId);
         String orgId = session.users().getUserById(session.getContext().getRealm(), userId).getFirstAttribute("org_id");
         logger.debug("Found org_id: " + orgId +" for userId: " + userId);
 
@@ -124,7 +124,9 @@ public class SpiceDbEventParser {
             case EVT_RESOURCE_ROLES_BY_ID:
                 return OBJECT_TYPE_ROLE;
             default:
-                throw new IllegalArgumentException("Resource type is not handled: " + event.getOperationType());
+                //throw new IllegalArgumentException("Resource type is not handled: " + event.getOperationType());
+                logger.info("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
+                return "";
         }
     }
 
@@ -139,7 +141,9 @@ public class SpiceDbEventParser {
             case DELETE:
                 return OpenFgaTupleEvent.OPERATION_DELETES;
             default:
-                throw new IllegalArgumentException("Unknown operation type: " + event.getOperationType());
+                //throw new IllegalArgumentException("Unknown operation type: " + event.getOperationType());
+                logger.info("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
+                return "";
         }
     }
 
