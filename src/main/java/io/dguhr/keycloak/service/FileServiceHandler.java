@@ -29,6 +29,11 @@ public class FileServiceHandler extends ServiceHandler {
 
     @Override
     public void handle(String eventId, String eventValue) throws ExecutionException, InterruptedException, TimeoutException {
+        if (eventValue.equals("")) {
+           logger.info("no processable event, idling...");
+           return;
+        }
+
         logger.info("[SpiceDbEventListener] File handler is writing event id: " + eventId + " with value: " + eventValue + " to file: " + getFileName());
         var filePath = System.getProperty("kc.home.dir");
 

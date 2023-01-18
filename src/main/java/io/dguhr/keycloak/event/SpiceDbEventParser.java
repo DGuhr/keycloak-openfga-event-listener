@@ -3,6 +3,8 @@ package io.dguhr.keycloak.event;
 import com.authzed.api.v1.Core;
 import com.authzed.api.v1.PermissionService;
 import com.authzed.api.v1.PermissionsServiceGrpc;
+import com.authzed.api.v1.SchemaServiceGrpc;
+import com.authzed.api.v1.SchemaServiceOuterClass;
 import com.authzed.grpcutil.BearerToken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -14,6 +16,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakSession;
 import io.grpc.ManagedChannel;
+import org.keycloak.models.UserModel;
 
 public class SpiceDbEventParser {
 
@@ -49,6 +52,10 @@ public class SpiceDbEventParser {
      *   |_ assignee     --> user   == Keycloak User Group Role Assignment
      */
     public String toTupleEvent() {
+        if(getEventOperation().equals("")) {
+            return "";
+        }
+
         // Get all the required information from the KC event
         String evtObjType = getEventObjectType();
         String evtUserType = getEventUserType();
@@ -67,6 +74,7 @@ public class SpiceDbEventParser {
         //TODO use the spicedb client
         // Check if the type (objectType) and object (userType) is present in the authorization model
         // So far, every relation between the type and the object is UNIQUE
+        // perhaps add this check and create it using the API if not exist?
         //ObjectRelation objectRelation = model.filterByType(evtObjType).filterByObject(evtUserType);
 
         ManagedChannel channel = ManagedChannelBuilder
@@ -74,41 +82,88 @@ public class SpiceDbEventParser {
                 .usePlaintext() // if not using TLS, replace with .usePlaintext()
                 .build();
 
+        SchemaServiceGrpc.SchemaServiceBlockingStub schemaService = SchemaServiceGrpc.newBlockingStub(channel)
+                .withCallCredentials(new BearerToken("12345"));
+        String schema = getInitialSchema();
+
         PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
                 .withCallCredentials(new BearerToken("12345")); //TODO configurable
 
-        PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
+        SchemaServiceOuterClass.ReadSchemaResponse schemaResponse = getOrCreateSchema(schemaService); //TODO refactor, maybe idempotent updates are a thing
+
+        UserModel user = session.users().getUserById(session.getContext().getRealm(), evtUserId);
+
+        PermissionService.WriteRelationshipsRequest req = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
                         Core.RelationshipUpdate.newBuilder()
                                 .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
                                 .setRelationship(
                                         Core.Relationship.newBuilder()
                                                 .setResource(
                                                         Core.ObjectReference.newBuilder()
-                                                                .setObjectType("thelargeapp/article")
-                                                                .setObjectId("java_test")
+                                                                .setObjectType("thelargeapp/group")
+                                                                .setObjectId(evtObjectId)
                                                                 .build())
-                                                .setRelation("author")
+                                                .setRelation("direct_member")
                                                 .setSubject(
                                                         Core.SubjectReference.newBuilder()
                                                                 .setObject(
                                                                         Core.ObjectReference.newBuilder()
                                                                                 .setObjectType("thelargeapp/user")
-                                                                                .setObjectId("george")
+                                                                                .setObjectId(evtUserId + " : " + user.getUsername())
                                                                                 .build())
                                                                 .build())
                                                 .build())
                                 .build())
                 .build();
 
-        PermissionService.WriteRelationshipsResponse response;
+        PermissionService.WriteRelationshipsResponse writeRelationResponse;
         try {
-            response = permissionService.writeRelationships(request);
+            writeRelationResponse = permissionService.writeRelationships(req);
         } catch (Exception e) {
-            logger.warn("RPC in writeRelationship failed: ", e);
+            logger.warn("WriteRelationshipsRequest failed: ", e);
             return "";
         }
-        logger.info("Response: " + response.toString());
-        return response.getWrittenAt().getToken();
+        logger.info("writeRelationResponse: " + writeRelationResponse);
+        return writeRelationResponse.getWrittenAt().getToken();
+    }
+
+    private static SchemaServiceOuterClass.ReadSchemaResponse getOrCreateSchema(SchemaServiceGrpc.SchemaServiceBlockingStub schemaService) {
+        SchemaServiceOuterClass.ReadSchemaRequest readRequest = SchemaServiceOuterClass.ReadSchemaRequest
+                .newBuilder()
+                .build();
+
+        SchemaServiceOuterClass.ReadSchemaResponse readResponse;
+
+        try {
+            readResponse = schemaService.readSchema(readRequest);
+        } catch (Exception e) {
+            //ugly but hey..
+            if(e.getMessage().contains("No schema has been defined")) {
+                logger.warn("No scheme there yet, creating initial one.");
+                writeSchema(schemaService, getInitialSchema());
+            }
+            return getOrCreateSchema(schemaService);
+
+        }
+        logger.info("Scheme found: " + readResponse.getSchemaText());
+        return readResponse;
+    }
+
+    private static String writeSchema(SchemaServiceGrpc.SchemaServiceBlockingStub schemaService, String schema) {
+        SchemaServiceOuterClass.WriteSchemaRequest request = SchemaServiceOuterClass.WriteSchemaRequest
+                .newBuilder()
+                .setSchema(schema)
+                .build();
+
+        SchemaServiceOuterClass.WriteSchemaResponse writeSchemaResponse;
+        try {
+            writeSchemaResponse = schemaService.writeSchema(request);
+        } catch (Exception e) {
+            logger.warn("WriteSchemaRequest failed", e);
+            throw new RuntimeException(e);
+        }
+        logger.info("writeSchemaResponse: " + writeSchemaResponse.toString());
+        return null;
     }
 
     /**
@@ -171,7 +226,6 @@ public class SpiceDbEventParser {
             case DELETE:
                 return OpenFgaTupleEvent.OPERATION_DELETES;
             default:
-                //throw new IllegalArgumentException("Unknown operation type: " + event.getOperationType());
                 logger.info("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
                 return "";
         }
@@ -253,49 +307,12 @@ public class SpiceDbEventParser {
         return sb.toString();
     }
 
-    //TODO: check this out.
-
-    public String test() {
-        ManagedChannel channel = ManagedChannelBuilder
-                .forTarget("host.docker.internal:50051") // TODO: create local setup and make it configurable
-                .usePlaintext() // if not using TLS, replace with .usePlaintext()
-                .build();
-        PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
-                .withCallCredentials(new BearerToken("12345")); //TODO configurable
-
-        PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
-                        Core.RelationshipUpdate.newBuilder()
-                                .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
-                                .setRelationship(
-                                        Core.Relationship.newBuilder()
-                                                .setResource(
-                                                        Core.ObjectReference.newBuilder()
-                                                                .setObjectType("thelargeapp/article")
-                                                                .setObjectId("java_test")
-                                                                .build())
-                                                .setRelation("author")
-                                                .setSubject(
-                                                        Core.SubjectReference.newBuilder()
-                                                                .setObject(
-                                                                        Core.ObjectReference.newBuilder()
-                                                                                .setObjectType("thelargeapp/user")
-                                                                                .setObjectId("george")
-                                                                                .build())
-                                                                .build())
-                                                .build())
-                                .build())
-                .build();
-
-
-        PermissionService.WriteRelationshipsResponse response;
-        try {
-            response = permissionService.writeRelationships(request);
-        } catch (Exception e) {
-            logger.warn("RPC in writeRelationship failed: ", e);
-            return "";
-        }
-        logger.info("Response: " + response.toString());
-        return response.getWrittenAt().getToken();
+    private static String getInitialSchema() {
+        return "definition testapp/group {\n" +
+                "  relation direct_member: thelargeapp/user\n" +
+                "  relation admin: thelargeapp/user\n" +
+                "  permission member = direct_member + admin\n" +
+                "}\n" +
+                "definition thelargeapp/user {}";
     }
-
 }
