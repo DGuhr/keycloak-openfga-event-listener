@@ -63,7 +63,9 @@ public class SpiceDbEventParser {
         String evtUserType = getEventUserType();
         String evtUserId   = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId();
         String evtObjectId = getEventObjectName();
+        String evtOrgId = findOrgIdOfUserId(evtUserId);
 
+        logger.debug("ORG ID FOR USER IN EVENT IS: " + evtOrgId);
         // Check if the type (objectType) and object (userType) is present in the authorization model
         // So far, every relation between the type and the object is UNIQUE
         ObjectRelation objectRelation = model.filterByType(evtObjType).filterByObject(evtUserType);
@@ -88,6 +90,14 @@ public class SpiceDbEventParser {
             default:
                 throw new IllegalArgumentException("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
         }
+    }
+
+    public String findOrgIdOfUserId(String userId) {
+        logger.debug("Finding org_id for userId: " + userId);
+        String orgId = session.users().getUserById(session.getContext().getRealm(), userId).getFirstAttribute("org_id");
+        logger.debug("Found org_id: " + orgId +" for userId: " + userId);
+
+        return orgId;
     }
 
     /**
