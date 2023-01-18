@@ -25,18 +25,18 @@ public class SpiceDbEventListenerProvider implements EventListenerProvider {
 
 	@Override
 	public void onEvent(Event event) {
-		LOG.debug("[SpiceDbEventListener] onEvent type: " + event.getType().toString());
-		LOG.debug("[SpiceDbEventListener] Discarding event...");
+		LOG.info("[SpiceDbEventListener] onEvent type: " + event.getType().toString());
+		LOG.info("[SpiceDbEventListener] Discarding event...");
 	}
 
 	@Override
 	public void onEvent(AdminEvent adminEvent, boolean includeRepresentation) {
-		LOG.debug("[SpiceDbEventListener] onEvent Admin received events");
+		LOG.info("[SpiceDbEventListener] onEvent Admin received events");
 
 		try {
-			LOG.debugf("[SpiceDbEventListener] admin event: " + mapper.writeValueAsString(adminEvent));
+			LOG.infof("[SpiceDbEventListener] admin event: " + mapper.writeValueAsString(adminEvent));
 			SpiceDbEventParser spiceDbEventParser = new SpiceDbEventParser(adminEvent, session);
-			LOG.debugf("[SpiceDbEventListener] event received: " + spiceDbEventParser.toString());
+			LOG.infof("[SpiceDbEventListener] event received: " + spiceDbEventParser);
 			service.handle(adminEvent.getId(), mapper.writeValueAsString(spiceDbEventParser.toTupleEvent()));
 		} catch (IllegalArgumentException e) {
 			LOG.warn(e.getMessage());

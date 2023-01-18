@@ -61,13 +61,13 @@ public class SpiceDbEventParser {
         String evtObjectId = getEventObjectName();
         String evtOrgId = findOrgIdOfUserId(evtUserId);
 
-        logger.debug("[SpiceDbEventListener] TYPE OF EVENT IS: " + event.getResourceTypeAsString());
-        logger.debug("[SpiceDbEventListener] ORG ID FOR USER IN EVENT IS: " + evtOrgId);
-        logger.debug("[SpiceDbEventListener] EVENTS object type IS: " + evtObjType);
-        logger.debug("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
-        logger.debug("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
-        logger.debug("[SpiceDbEventListener] EVENTS onbject ID IS: " + evtObjectId);
-        logger.debug("[SpiceDbEventListener] EVENT represantation is: " + event.getRepresentation());
+        logger.info("[SpiceDbEventListener] TYPE OF EVENT IS: " + event.getResourceTypeAsString());
+        logger.info("[SpiceDbEventListener] ORG ID FOR USER IN EVENT IS: " + evtOrgId);
+        logger.info("[SpiceDbEventListener] EVENTS object type IS: " + evtObjType);
+        logger.info("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
+        logger.info("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
+        logger.info("[SpiceDbEventListener] EVENTS onbject ID IS: " + evtObjectId);
+        logger.info("[SpiceDbEventListener] EVENT represantation is: " + event.getRepresentation());
 
         //TODO use the spicedb client
         // Check if the type (objectType) and object (userType) is present in the authorization model

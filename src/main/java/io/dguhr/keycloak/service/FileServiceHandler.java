@@ -29,7 +29,7 @@ public class FileServiceHandler extends ServiceHandler {
 
     @Override
     public void handle(String eventId, String eventValue) throws ExecutionException, InterruptedException, TimeoutException {
-        logger.debug("[SpiceDbEventListener] File handler is writing event id: " + eventId + " with value: " + eventValue + " to file: " + getFileName());
+        logger.info("[SpiceDbEventListener] File handler is writing event id: " + eventId + " with value: " + eventValue + " to file: " + getFileName());
         var filePath = System.getProperty("kc.home.dir");
 
         Path p = Paths.get(filePath+"spicedb_export.txt");
