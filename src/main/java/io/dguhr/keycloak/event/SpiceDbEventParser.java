@@ -69,7 +69,7 @@ public class SpiceDbEventParser {
         logger.info("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
         logger.info("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
         logger.info("[SpiceDbEventListener] EVENTS group value ID IS: " + evtObjectId);
-        logger.info("[SpiceDbEventListener] EVENT represantation is: " + event.getRepresentation());
+        logger.info("[SpiceDbEventListener] EVENT representation is: " + event.getRepresentation());
 
         //TODO use the spicedb client
         // Check if the type (objectType) and object (userType) is present in the authorization model
@@ -109,7 +109,7 @@ public class SpiceDbEventParser {
                                                                 .setObject(
                                                                         Core.ObjectReference.newBuilder()
                                                                                 .setObjectType("thelargeapp/user")
-                                                                                .setObjectId(evtUserId + " : " + user.getUsername())
+                                                                                .setObjectId(evtUserId + "_" + user.getUsername())
                                                                                 .build())
                                                                 .build())
                                                 .build())
@@ -308,7 +308,7 @@ public class SpiceDbEventParser {
     }
 
     private static String getInitialSchema() {
-        return "definition testapp/group {\n" +
+        return "definition thelargeapp/group {\n" +
                 "  relation direct_member: thelargeapp/user\n" +
                 "  relation admin: thelargeapp/user\n" +
                 "  permission member = direct_member + admin\n" +
