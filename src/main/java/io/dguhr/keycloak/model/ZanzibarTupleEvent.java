@@ -1,8 +1,9 @@
-package io.embesozzi.keycloak.model;
+package io.dguhr.keycloak.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.Objects;
 
+//TODO: check if eneded, gRPC/protobuf/java client should do it when I understand correctly.
 @JsonSerialize(using = OpenFgaTupleEventSerializer.class)
 public abstract class ZanzibarTupleEvent {
 

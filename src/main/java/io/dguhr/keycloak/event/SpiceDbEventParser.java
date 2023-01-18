@@ -1,20 +1,25 @@
-package io.embesozzi.keycloak.event;
+package io.dguhr.keycloak.event;
 
+import com.authzed.api.v1.Core;
+import com.authzed.api.v1.PermissionService;
+import com.authzed.api.v1.PermissionsServiceGrpc;
+import com.authzed.grpcutil.BearerToken;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.embesozzi.keycloak.model.*;
+import io.dguhr.keycloak.model.AuthorizationModel;
+import io.dguhr.keycloak.model.ObjectRelation;
+import io.dguhr.keycloak.model.OpenFgaTupleEvent;
+import io.dguhr.keycloak.model.ZanzibarTupleEvent;
+import io.dguhr.keycloak.model.*;
+import io.grpc.ManagedChannelBuilder;
 import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
 import org.keycloak.models.KeycloakSession;
+import io.grpc.ManagedChannel;
 
-public class EventParser {
-
-    private AdminEvent event;
-    private ObjectMapper mapper;
-    private KeycloakSession session;
-    private AuthorizationModel model;
+public class SpiceDbEventParser {
 
     public static final String EVT_RESOURCE_USERS = "users";
     public static final String EVT_RESOURCE_GROUPS = "groups";
@@ -23,13 +28,18 @@ public class EventParser {
     public static final String OBJECT_TYPE_ROLE = "role";
     public static final String OBJECT_TYPE_GROUP = "group";
 
-    private static final Logger LOG = Logger.getLogger(EventParser.class);
+    private AdminEvent event;
+    private ObjectMapper mapper;
+    private KeycloakSession session;
+    private AuthorizationModel model;
 
-    public EventParser(AdminEvent event){
+    private static final Logger logger = Logger.getLogger(SpiceDbEventParser.class);
+
+    public SpiceDbEventParser(AdminEvent event){
         this.event = event;
         this.mapper = new ObjectMapper();
     }
-    public EventParser(AdminEvent event, AuthorizationModel model, KeycloakSession session){
+    public SpiceDbEventParser(AdminEvent event, AuthorizationModel model, KeycloakSession session){
         this.event = event;
         this.session = session;
         this.model = model;
@@ -67,11 +77,12 @@ public class EventParser {
                 .build();
     }
 
+    /**
+     * Checks for group_membership events.
+     * @return object type or error
+     */
     public String getEventObjectType() {
         switch (event.getResourceType()) {
-            case REALM_ROLE_MAPPING:
-            case REALM_ROLE:
-                return OBJECT_TYPE_ROLE;
             case GROUP_MEMBERSHIP:
                 return OBJECT_TYPE_GROUP;
             default:
@@ -79,6 +90,10 @@ public class EventParser {
         }
     }
 
+    /**
+     * perhaps rename to getEventSubjectType?
+     * @return
+     */
     public String getEventUserType() {
         switch (getEventResourceName()) {
             case EVT_RESOURCE_USERS:
@@ -92,6 +107,10 @@ public class EventParser {
         }
     }
 
+    /**
+     * //TODO: rename + extend for update cases?
+     * @return
+     */
     public String getEventOperation() {
         switch (event.getOperationType()) {
             case CREATE:
@@ -153,7 +172,7 @@ public class EventParser {
     }
 
     public String findRoleNameInRealm(String roleId)  {
-        LOG.debug("Finding role name by role id: " +  roleId);
+        logger.debug("Finding role name by role id: " +  roleId);
         return session.getContext().getRealm().getRoleById(roleId).getName();
     }
 
@@ -180,4 +199,50 @@ public class EventParser {
         }
         return sb.toString();
     }
+
+    //TODO: check this out.
+
+    public String test () {
+        ManagedChannel channel = ManagedChannelBuilder
+                .forTarget("grpc.authzed.com:443") // TODO: create local setup
+                .usePlaintext() // if using TLS, replace with .useTransportSecurity()
+                .build();
+        PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
+                .withCallCredentials(new BearerToken("t_your_token_here_1234567deadbeef"));
+
+        PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
+                        com.authzed.api.v1.Core.RelationshipUpdate.newBuilder()
+                                .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
+                                .setRelationship(
+                                        Core.Relationship.newBuilder()
+                                                .setResource(
+                                                        Core.ObjectReference.newBuilder()
+                                                                .setObjectType("thelargeapp/article")
+                                                                .setObjectId("java_test")
+                                                                .build())
+                                                .setRelation("author")
+                                                .setSubject(
+                                                        Core.SubjectReference.newBuilder()
+                                                                .setObject(
+                                                                        Core.ObjectReference.newBuilder()
+                                                                                .setObjectType("thelargeapp/user")
+                                                                                .setObjectId("george")
+                                                                                .build())
+                                                                .build())
+                                                .build())
+                                .build())
+                .build();
+
+
+        PermissionService.WriteRelationshipsResponse response;
+        try {
+            response = permissionService.writeRelationships(request);
+        } catch (Exception e) {
+            logger.warn("RPC in writeRelationship failed: ", e);
+            return "";
+        }
+        logger.info("Response: " + response.toString());
+        return response.getWrittenAt().getToken();
+    }
+
 }

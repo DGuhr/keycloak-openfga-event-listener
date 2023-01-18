@@ -1,21 +1,21 @@
-package io.embesozzi.keycloak;
+package io.dguhr.keycloak;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.embesozzi.keycloak.model.AuthorizationModel;
-import io.embesozzi.keycloak.service.ServiceHandler;
-import io.embesozzi.keycloak.service.ServiceHandlerFactory;
+import io.dguhr.keycloak.service.ServiceHandler;
+import io.dguhr.keycloak.service.ServiceHandlerFactory;
+import io.dguhr.keycloak.model.AuthorizationModel;
 import org.keycloak.Config.Scope;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerProviderFactory;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
-public class OpenFgaEventListenerProviderFactory implements EventListenerProviderFactory {
+public class SpiceDbEventListenerProviderFactory implements EventListenerProviderFactory {
 
-	private static final String PROVIDER_ID = "openfga-events";
-	private OpenFgaEventListenerProvider instance;
+	private static final String PROVIDER_ID = "spicedb-events";
+	private SpiceDbEventListenerProvider instance;
 	private String serviceHandlerName;
 	private AuthorizationModel model;
 	private Scope config;
@@ -25,7 +25,7 @@ public class OpenFgaEventListenerProviderFactory implements EventListenerProvide
 		if (instance == null) {
 			ServiceHandler serviceHandler = ServiceHandlerFactory.create(serviceHandlerName, session, config);
 			serviceHandler.validateConfig();
-			instance = new OpenFgaEventListenerProvider(model, serviceHandler, session);
+			instance = new SpiceDbEventListenerProvider(model, serviceHandler, session);
 		}
 		return instance;
 	}

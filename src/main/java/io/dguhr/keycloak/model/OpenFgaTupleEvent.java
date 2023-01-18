@@ -1,7 +1,8 @@
-package io.embesozzi.keycloak.model;
+package io.dguhr.keycloak.model;
 
 import org.keycloak.utils.StringUtil;
 
+// TODO evaluate if needed, we get it generated from gRPC/proto files when I understand correctly
 public class OpenFgaTupleEvent extends ZanzibarTupleEvent {
 
     public static final String OPERATION_WRITES = "writes";

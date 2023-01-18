@@ -1,4 +1,5 @@
-# Keycloak OpenFGA Custom Event Listener
+TODO: refactor for spicedb when working.
+# Keycloak SpiceDB Custom Event Listener
 
 Here is a Custom Event Listener Extension known as Service Provider Interfaces (SPI) which helps to integrate [Keycloak](https://www.keycloak.org/) and [OpenFGA](https://openfga.dev/). OpenFGA is an open source solution for Fine-Grained Authorization that applies the concept of ReBAC (created by the Auth0 inspired by Zanzibar).  
 The SPI implements these steps:

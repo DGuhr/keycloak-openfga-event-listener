@@ -1,4 +1,4 @@
-package io.embesozzi.keycloak.model;
+package io.dguhr.keycloak.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

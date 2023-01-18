@@ -1,4 +1,4 @@
-package io.embesozzi.keycloak.service;
+package io.dguhr.keycloak.service;
 
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -6,8 +6,6 @@ import org.keycloak.Config;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.utils.StringUtil;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -31,11 +29,11 @@ public class KafkaServiceHandler extends ServiceHandler {
 
     @Override
     public void handle(String eventId, String eventValue) throws ExecutionException, InterruptedException, TimeoutException {
-        LOG.debug("[OpenFgaEventListener] Kafka producer is sending event id: " + eventId + " with value: " + eventValue + " to topic: " + getAdminTopic());
+        LOG.debug("[SpiceDbEventListener] Kafka producer is sending event id: " + eventId + " with value: " + eventValue + " to topic: " + getAdminTopic());
         ProducerRecord<String, String> record = new ProducerRecord<>(getAdminTopic(), eventId, eventValue);
         Future<RecordMetadata> metaData = producer.send(record);
         RecordMetadata recordMetadata = metaData.get(30, TimeUnit.SECONDS);
-        LOG.debug("[OpenFgaEventListener] Received new metadata. \n" +
+        LOG.debug("[SpiceDbEventListener] Received new metadata. \n" +
                 "Topic:" + recordMetadata.topic() + "\n" +
                 "Partition: " + recordMetadata.partition() + "\n" +
                 "Key:" + record.key() + "\n" +
@@ -46,9 +44,9 @@ public class KafkaServiceHandler extends ServiceHandler {
     @Override
     public void validateConfig() {
         StringBuilder message = new StringBuilder();
-        message.append(StringUtil.isBlank(getAdminTopic()) ? String.format("Parameter % name is must not be null", KAFKA_ADMIN_TOPIC) : "");
-        message.append(StringUtil.isBlank(getClientId()) ? String.format("Parameter % name is must not be null", KAFKA_CLIENT_ID) : "");
-        message.append(StringUtil.isBlank(getBootstrapServers()) ? String.format("Parameter % name is must not be null", KAFKA_BOOTSTRAP_SERVERS): "");
+        message.append(StringUtil.isBlank(getAdminTopic()) ? String.format("Parameter % name must not be null", KAFKA_ADMIN_TOPIC) : "");
+        message.append(StringUtil.isBlank(getClientId()) ? String.format("Parameter % name must not be null", KAFKA_CLIENT_ID) : "");
+        message.append(StringUtil.isBlank(getBootstrapServers()) ? String.format("Parameter % name must not be null", KAFKA_BOOTSTRAP_SERVERS): "");
         if (message.length() > 0) {
             throw new IllegalStateException(message.toString());
         }

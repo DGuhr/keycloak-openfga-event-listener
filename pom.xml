@@ -2,8 +2,8 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>io.embesozzi.keycloak</groupId>
-	<artifactId>keycloak-openfga-event-listener</artifactId>
+	<groupId>io.dguhr.keycloak</groupId>
+	<artifactId>keycloak-spicedb-event-listener</artifactId>
 	<version>2.0.0</version>
 
 	<properties>
@@ -65,6 +65,23 @@
 			<artifactId>junit-jupiter-api</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+
+		<!-- spicedb java client -->
+		<dependency>
+			<groupId>com.authzed.api</groupId>
+			<artifactId>authzed</artifactId>
+			<version>0.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-protobuf</artifactId>
+			<version>1.52.1</version>
+		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-stub</artifactId>
+			<version>1.52.1</version>
 		</dependency>
 	</dependencies>
 
