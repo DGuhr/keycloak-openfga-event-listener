@@ -37,7 +37,7 @@ public class SpiceDbEventListenerProvider implements EventListenerProvider {
 			LOG.infof("[SpiceDbEventListener] admin event: " + mapper.writeValueAsString(adminEvent));
 			SpiceDbEventParser spiceDbEventParser = new SpiceDbEventParser(adminEvent, session);
 			LOG.infof("[SpiceDbEventListener] event received: " + spiceDbEventParser);
-			service.handle(adminEvent.getId(), mapper.writeValueAsString(spiceDbEventParser.toTupleEvent()));
+			service.handle(adminEvent.getId(), spiceDbEventParser.toTupleEvent());
 		} catch (IllegalArgumentException e) {
 			LOG.warn(e.getMessage());
 		}

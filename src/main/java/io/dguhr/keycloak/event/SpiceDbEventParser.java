@@ -8,9 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.dguhr.keycloak.model.ObjectRelation;
 import io.dguhr.keycloak.model.OpenFgaTupleEvent;
-import io.dguhr.keycloak.model.ZanzibarTupleEvent;
 import io.grpc.ManagedChannelBuilder;
 import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
@@ -31,11 +29,11 @@ public class SpiceDbEventParser {
 
     private static final Logger logger = Logger.getLogger(SpiceDbEventParser.class);
 
-    public SpiceDbEventParser(AdminEvent event){
+    public SpiceDbEventParser(AdminEvent event) {
         this.event = event;
     }
 
-    public SpiceDbEventParser(AdminEvent event, KeycloakSession session){
+    public SpiceDbEventParser(AdminEvent event, KeycloakSession session) {
         this.event = event;
         this.session = session;
     }
@@ -50,12 +48,11 @@ public class SpiceDbEventParser {
      *  group
      *   |_ assignee     --> user   == Keycloak User Group Role Assignment
      */
-    public ZanzibarTupleEvent toTupleEvent()
-    {
+    public String toTupleEvent() {
         // Get all the required information from the KC event
-        String evtObjType  = getEventObjectType();
+        String evtObjType = getEventObjectType();
         String evtUserType = getEventUserType();
-        String evtUserId   = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId();
+        String evtUserId = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId();
         String evtObjectId = getEventObjectName();
         String evtOrgId = findOrgIdOfUserId(evtUserId);
 
@@ -72,17 +69,51 @@ public class SpiceDbEventParser {
         // So far, every relation between the type and the object is UNIQUE
         //ObjectRelation objectRelation = model.filterByType(evtObjType).filterByObject(evtUserType);
 
-        return new OpenFgaTupleEvent.Builder()
-              .objectType(evtObjType)
-              .withObjectRelation(new ObjectRelation("related","foo"))
-              .userId(evtUserId)
-              .objectId(evtObjectId)
-              .operation(getEventOperation())
-              .build();
+        ManagedChannel channel = ManagedChannelBuilder
+                .forTarget("host.docker.internal:50051") // TODO: create local setup and make it configurable
+                .usePlaintext() // if not using TLS, replace with .usePlaintext()
+                .build();
+
+        PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
+                .withCallCredentials(new BearerToken("12345")); //TODO configurable
+
+        PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
+                        Core.RelationshipUpdate.newBuilder()
+                                .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
+                                .setRelationship(
+                                        Core.Relationship.newBuilder()
+                                                .setResource(
+                                                        Core.ObjectReference.newBuilder()
+                                                                .setObjectType("thelargeapp/article")
+                                                                .setObjectId("java_test")
+                                                                .build())
+                                                .setRelation("author")
+                                                .setSubject(
+                                                        Core.SubjectReference.newBuilder()
+                                                                .setObject(
+                                                                        Core.ObjectReference.newBuilder()
+                                                                                .setObjectType("thelargeapp/user")
+                                                                                .setObjectId("george")
+                                                                                .build())
+                                                                .build())
+                                                .build())
+                                .build())
+                .build();
+
+        PermissionService.WriteRelationshipsResponse response;
+        try {
+            response = permissionService.writeRelationships(request);
+        } catch (Exception e) {
+            logger.warn("RPC in writeRelationship failed: ", e);
+            return "";
+        }
+        logger.info("Response: " + response.toString());
+        return response.getWrittenAt().getToken();
     }
 
     /**
      * Checks for group_membership events.
+     *
      * @return object type or error
      */
     public String getEventObjectType() {
@@ -101,15 +132,16 @@ public class SpiceDbEventParser {
     }
 
     public String findOrgIdOfUserId(String userId) {
-        logger.debug("Searching org_id for userId: " + userId);
+        logger.info("Searching org_id for userId: " + userId);
         String orgId = session.users().getUserById(session.getContext().getRealm(), userId).getFirstAttribute("org_id");
-        logger.debug("Found org_id: " + orgId +" for userId: " + userId);
+        logger.info("Found org_id: " + orgId + " for userId: " + userId);
 
         return orgId;
     }
 
     /**
      * perhaps rename to getEventSubjectType?
+     *
      * @return
      */
     public String getEventUserType() {
@@ -129,6 +161,7 @@ public class SpiceDbEventParser {
 
     /**
      * //TODO: rename + extend for update cases?
+     *
      * @return
      */
     public String getEventOperation() {
@@ -181,25 +214,23 @@ public class SpiceDbEventParser {
         String representation = event.getRepresentation().replaceAll("\\\\", ""); // Fixme: I should try to avoid the replace
         try {
             JsonNode jsonNode = mapper.readTree(representation);
-            if(jsonNode.isArray()){
+            if (jsonNode.isArray()) {
                 return jsonNode.get(0).get(attributeName).asText();
             }
             return jsonNode.get(attributeName).asText();
-        }
-        catch (JsonMappingException e) {
+        } catch (JsonMappingException e) {
             throw new RuntimeException(e); // Fixme: Improve exception handling
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public String findRoleNameInRealm(String roleId)  {
-        logger.debug("Finding role name by role id: " +  roleId);
+    public String findRoleNameInRealm(String roleId) {
+        logger.debug("Finding role name by role id: " + roleId);
         return session.getContext().getRealm().getRoleById(roleId).getName();
     }
 
-    public String toString()
-    {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("AdminEvent resourceType=");
         sb.append(event.getResourceType());
@@ -224,16 +255,16 @@ public class SpiceDbEventParser {
 
     //TODO: check this out.
 
-    public String test () {
+    public String test() {
         ManagedChannel channel = ManagedChannelBuilder
-                .forTarget("localhost:50051") // TODO: create local setup and make it configurable
+                .forTarget("host.docker.internal:50051") // TODO: create local setup and make it configurable
                 .usePlaintext() // if not using TLS, replace with .usePlaintext()
                 .build();
         PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
-                .withCallCredentials(new BearerToken("t_your_token_here_1234567deadbeef")); //TODO configurable
+                .withCallCredentials(new BearerToken("12345")); //TODO configurable
 
         PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
-                        com.authzed.api.v1.Core.RelationshipUpdate.newBuilder()
+                        Core.RelationshipUpdate.newBuilder()
                                 .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
                                 .setRelationship(
                                         Core.Relationship.newBuilder()

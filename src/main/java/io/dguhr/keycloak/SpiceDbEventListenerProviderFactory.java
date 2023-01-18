@@ -42,17 +42,17 @@ public class SpiceDbEventListenerProviderFactory implements EventListenerProvide
 			throw new NullPointerException("Service handler name must not be null.");
 		}
 
-		String authorizationModelJson = config.get("authorizationModel");
-		if (authorizationModelJson == null) {
-			throw new NullPointerException("Authorization Model must not be null.");
-		}
+		//String authorizationModelJson = config.get("authorizationModel");
+		//if (authorizationModelJson == null) {
+		//	throw new NullPointerException("Authorization Model must not be null.");
+		//}
 
-		ObjectMapper objectMapper = new ObjectMapper();
-		try {
-			this.model = objectMapper.readValue(authorizationModelJson, AuthorizationModel.class);
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException("Authorization Model is not valid: " + e.getMessage());
-		}
+		//ObjectMapper objectMapper = new ObjectMapper();
+		//try {
+		//	this.model = objectMapper.readValue(authorizationModelJson, AuthorizationModel.class);
+		//} catch (JsonProcessingException e) {
+		//	throw new RuntimeException("Authorization Model is not valid: " + e.getMessage());
+		//}
 		this.config = config;
 	}
 
