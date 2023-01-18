@@ -19,7 +19,7 @@ services:
       - 5433:5432
   keycloak:
     build: .
-    image: embesozzi/keycloak
+    image: dguhr/keycloak_spicedbtest
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: password
@@ -35,48 +35,117 @@ services:
       KC_HOSTNAME_ADMIN: localhost
       KC_HOSTNAME: localhost
       # Keycloak SpiceDB Event Listener SPI configuration
-      KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_SERVICE_HANDLER_NAME: KAFKA
-      # TODO evalute if needed
-      # KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_AUTHORIZATION_MODEL: '{"type_definitions":[{"type":"group","relationships":[{"relation":"assignee","object":"role"}]},{"type":"role","relationships":[{"relation":"assignee","object":"user"},{"relation":"parent","object":"role"},{"relation":"parent_group","object":"group"}]}]}'
+      KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_SERVICE_HANDLER_NAME: FILE
+      # TODO evaluate if needed
+      KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_AUTHORIZATION_MODEL: '{"type_definitions":[{"type":"group","relationships":[{"relation":"assignee","object":"role"}]},{"type":"role","relationships":[{"relation":"assignee","object":"user"},{"relation":"parent","object":"role"},{"relation":"parent_group","object":"group"}]}]}'
       KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_CLIENT_ID: keycloak-producer
       KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_ADMIN_TOPIC: spicedb-topic
       KC_SPI_EVENTS_LISTENER_SPICEDB_EVENTS_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:19092
-      KC_LOG_LEVEL: INFO, io.embesozzi.keycloak:debug
+      KC_LOG_LEVEL: INFO, io.dguhr.keycloak:debug
     ports:
-      - 8080:8080
+      - 8081:8081
       - 8443:8443
     depends_on:
       - postgres
+      - spicedb
     networks:
       default:
         aliases:
           -  keycloak
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.2.2
-    hostname: zookeeper
-    container_name: zookeeper
+# zookeeper:
+#   image: confluentinc/cp-zookeeper:7.2.2
+#   hostname: zookeeper
+#   container_name: zookeeper
+#   ports:
+#     - "2181:2181"
+#   environment:
+#     ZOOKEEPER_CLIENT_PORT: 2181
+#     ZOOKEEPER_SERVER_ID: 1
+# kafka:
+#   image: confluentinc/cp-kafka:7.2.2
+#   hostname: kafka
+#   container_name: kafka
+#   ports:
+#     - "9092:9092"
+#     - "19092:19092"
+#     - "29092:29092"
+#   environment:
+#     KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092
+#     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT
+#     KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+#     KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+#     KAFKA_DELETE_TOPIC_ENABLE: 'true'
+#     KAFKA_CREATE_TOPICS: openfga-topic:1.1
+#     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#     KAFKA_ADVERTISED_HOST_NAME: kafka
+#   depends_on:
+#     - zookeeper
+
+# removed for later use.
+
+# spicedb on cockrach start
+  spicedb:
+    image: "authzed/spicedb"
+    command: "serve"
+    restart: "always"
     ports:
-      - "2181:2181"
+      - "8080:8080"
+      - "9090:9090"
+      - "50051:50051"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_SERVER_ID: 1
-  kafka:
-    image: confluentinc/cp-kafka:7.2.2
-    hostname: kafka
-    container_name: kafka
-    ports:
-      - "9092:9092"
-      - "19092:19092"
-      - "29092:29092"
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-      KAFKA_DELETE_TOPIC_ENABLE: 'true'
-      KAFKA_CREATE_TOPICS: openfga-topic:1.1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_ADVERTISED_HOST_NAME: kafka
+      SPICEDB_GRPC_PRESHARED_KEY: foobar
+      SPICEDB_DATASTORE_ENGINE: cockroachdb
+      SPICEDB_DATASTORE_CONN_URI: "postgresql://root:secret@crdb:26257/spicedb?sslmode=disable"
+      SPICEDB_LOG_LEVEL: info
+      SPICEDB_LOG_FORMAT: console
     depends_on:
-      - zookeeper
+      - "migrate"
+
+  migrate:
+    image: "authzed/spicedb"
+    command: "migrate head"
+    restart: "on-failure:3"
+    environment:
+      - "SPICEDB_DATASTORE_ENGINE=cockroachdb"
+      - "SPICEDB_DATASTORE_CONN_URI=postgresql://root:secret@crdb:26257/spicedb?sslmode=disable"
+      - "SPICEDB_LOG_LEVEL=info"
+      - "SPICEDB_LOG_FORMAT=console"
+    depends_on:
+      - "init_database"
+
+  init_database:
+    image: "cockroachdb/cockroach"
+    restart: "on-failure:3"
+    command: "sql --insecure -e 'CREATE DATABASE IF NOT EXISTS spicedb;'"
+    environment:
+      - "COCKROACH_HOST=crdb:26257"
+    depends_on:
+      - "init_cluster"
+
+  init_cluster:
+    image: "cockroachdb/cockroach"
+    restart: "on-failure:3"
+    command: "init --insecure"
+    environment:
+      # initialize cluster through node 1
+      - "COCKROACH_HOST=datastores-crdb-1:26257"
+    depends_on:
+      - "crdb"
+
+  crdb:
+    image: "cockroachdb/cockroach"
+    # in order to make the cluster form, the host name is <project>-<service>-<number>
+    # The setup will support --scale arg with any value
+    command: "start --join=datastores-crdb-1,datastores-crdb-2,datastores-crdb-3 --insecure"
+    ports:
+      - "8080"
+      - "26257"
+    environment:
+      - "POSTGRES_PASSWORD=secret"
+    healthcheck:
+      test: "curl --fail http://localhost:8080/health?ready=1 || exit 1"
+      interval: "2s"
+      retries: 3
+      start_period: "15s"
+      timeout: "5s"

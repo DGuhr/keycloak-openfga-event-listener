@@ -14,16 +14,12 @@ public class SpiceDbEventListenerProvider implements EventListenerProvider {
 	private static final Logger LOG = Logger.getLogger(SpiceDbEventListenerProvider.class);
 	private ObjectMapper mapper;
 	private ServiceHandler service;
-
-	private AuthorizationModel model;
 	private KeycloakSession session;
 
 	public SpiceDbEventListenerProvider(AuthorizationModel model, ServiceHandler service, KeycloakSession session) {
 		LOG.info("[SpiceDbEventListener] SpiceDbEventListenerProvider initializing...");
 		this.service = service;
 		this.session = session;
-		this.model = model;
-		LOG.info("[SpiceDbEventListener] SpiceDbEventListenerProvider initialized with model: " + model.toString());
 		mapper = new ObjectMapper();
 	}
 
@@ -39,7 +35,7 @@ public class SpiceDbEventListenerProvider implements EventListenerProvider {
 
 		try {
 			LOG.debugf("[SpiceDbEventListener] admin event: " + mapper.writeValueAsString(adminEvent));
-			SpiceDbEventParser spiceDbEventParser = new SpiceDbEventParser(adminEvent, model, session);
+			SpiceDbEventParser spiceDbEventParser = new SpiceDbEventParser(adminEvent, session);
 			LOG.debugf("[SpiceDbEventListener] event received: " + spiceDbEventParser.toString());
 			service.handle(adminEvent.getId(), mapper.writeValueAsString(spiceDbEventParser.toTupleEvent()));
 		} catch (IllegalArgumentException e) {

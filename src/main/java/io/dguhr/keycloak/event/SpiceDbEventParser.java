@@ -8,11 +8,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.dguhr.keycloak.model.AuthorizationModel;
 import io.dguhr.keycloak.model.ObjectRelation;
 import io.dguhr.keycloak.model.OpenFgaTupleEvent;
 import io.dguhr.keycloak.model.ZanzibarTupleEvent;
-import io.dguhr.keycloak.model.*;
 import io.grpc.ManagedChannelBuilder;
 import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
@@ -31,7 +29,6 @@ public class SpiceDbEventParser {
     private AdminEvent event;
     private ObjectMapper mapper;
     private KeycloakSession session;
-    private AuthorizationModel model;
 
     private static final Logger logger = Logger.getLogger(SpiceDbEventParser.class);
 
@@ -39,10 +36,9 @@ public class SpiceDbEventParser {
         this.event = event;
         this.mapper = new ObjectMapper();
     }
-    public SpiceDbEventParser(AdminEvent event, AuthorizationModel model, KeycloakSession session){
+    public SpiceDbEventParser(AdminEvent event, KeycloakSession session){
         this.event = event;
         this.session = session;
-        this.model = model;
         this.mapper = new ObjectMapper();
     }
 
@@ -65,18 +61,26 @@ public class SpiceDbEventParser {
         String evtObjectId = getEventObjectName();
         String evtOrgId = findOrgIdOfUserId(evtUserId);
 
-        logger.debug("ORG ID FOR USER IN EVENT IS: " + evtOrgId);
+        logger.debug("[SpiceDbEventListener] TYPE OF EVENT IS: " + event.getResourceTypeAsString());
+        logger.debug("[SpiceDbEventListener] ORG ID FOR USER IN EVENT IS: " + evtOrgId);
+        logger.debug("[SpiceDbEventListener] EVENTS object type IS: " + evtObjType);
+        logger.debug("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
+        logger.debug("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
+        logger.debug("[SpiceDbEventListener] EVENTS onbject ID IS: " + evtObjectId);
+        logger.debug("[SpiceDbEventListener] EVENT represantation is: " + event.getRepresentation());
+
+        //TODO use the spicedb client
         // Check if the type (objectType) and object (userType) is present in the authorization model
         // So far, every relation between the type and the object is UNIQUE
-        ObjectRelation objectRelation = model.filterByType(evtObjType).filterByObject(evtUserType);
+        //ObjectRelation objectRelation = model.filterByType(evtObjType).filterByObject(evtUserType);
 
         return new OpenFgaTupleEvent.Builder()
-                .objectType(evtObjType)
-                .withObjectRelation(objectRelation)
-                .userId(evtUserId)
-                .objectId(evtObjectId)
-                .operation(getEventOperation())
-                .build();
+              .objectType(evtObjType)
+              .withObjectRelation(new ObjectRelation("related","foo"))
+              .userId(evtUserId)
+              .objectId(evtObjectId)
+              .operation(getEventOperation())
+              .build();
     }
 
     /**
@@ -85,6 +89,10 @@ public class SpiceDbEventParser {
      */
     public String getEventObjectType() {
         switch (event.getResourceType()) {
+            //remove roles from the game for now. TODO: check if wanted.
+            /*case REALM_ROLE_MAPPING:
+            case REALM_ROLE:
+                return OBJECT_TYPE_ROLE;*/
             case GROUP_MEMBERSHIP:
                 return OBJECT_TYPE_GROUP;
             default:
@@ -214,11 +222,11 @@ public class SpiceDbEventParser {
 
     public String test () {
         ManagedChannel channel = ManagedChannelBuilder
-                .forTarget("grpc.authzed.com:443") // TODO: create local setup
-                .usePlaintext() // if using TLS, replace with .useTransportSecurity()
+                .forTarget("localhost:50051") // TODO: create local setup and make it configurable
+                .usePlaintext() // if not using TLS, replace with .usePlaintext()
                 .build();
         PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService = PermissionsServiceGrpc.newBlockingStub(channel)
-                .withCallCredentials(new BearerToken("t_your_token_here_1234567deadbeef"));
+                .withCallCredentials(new BearerToken("t_your_token_here_1234567deadbeef")); //TODO configurable
 
         PermissionService.WriteRelationshipsRequest request = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
                         com.authzed.api.v1.Core.RelationshipUpdate.newBuilder()
