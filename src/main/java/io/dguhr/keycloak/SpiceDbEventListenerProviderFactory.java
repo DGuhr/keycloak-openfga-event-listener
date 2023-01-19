@@ -1,11 +1,7 @@
 package io.dguhr.keycloak;
 
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dguhr.keycloak.service.ServiceHandler;
 import io.dguhr.keycloak.service.ServiceHandlerFactory;
-import io.dguhr.keycloak.model.AuthorizationModel;
 import org.keycloak.Config.Scope;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventListenerProviderFactory;
@@ -17,7 +13,6 @@ public class SpiceDbEventListenerProviderFactory implements EventListenerProvide
 	private static final String PROVIDER_ID = "spicedb-events";
 	private SpiceDbEventListenerProvider instance;
 	private String serviceHandlerName;
-	private AuthorizationModel model;
 	private Scope config;
 
 	@Override
@@ -25,7 +20,7 @@ public class SpiceDbEventListenerProviderFactory implements EventListenerProvide
 		if (instance == null) {
 			ServiceHandler serviceHandler = ServiceHandlerFactory.create(serviceHandlerName, session, config);
 			serviceHandler.validateConfig();
-			instance = new SpiceDbEventListenerProvider(model, serviceHandler, session);
+			instance = new SpiceDbEventListenerProvider(serviceHandler, session);
 		}
 		return instance;
 	}
@@ -42,22 +37,11 @@ public class SpiceDbEventListenerProviderFactory implements EventListenerProvide
 			throw new NullPointerException("Service handler name must not be null.");
 		}
 
-		//String authorizationModelJson = config.get("authorizationModel");
-		//if (authorizationModelJson == null) {
-		//	throw new NullPointerException("Authorization Model must not be null.");
-		//}
-
-		//ObjectMapper objectMapper = new ObjectMapper();
-		//try {
-		//	this.model = objectMapper.readValue(authorizationModelJson, AuthorizationModel.class);
-		//} catch (JsonProcessingException e) {
-		//	throw new RuntimeException("Authorization Model is not valid: " + e.getMessage());
-		//}
 		this.config = config;
 	}
 
 	@Override
-	public void postInit(KeycloakSessionFactory arg0) {
+	public void postInit(KeycloakSessionFactory ksf) {
 		// ignore
 	}
 

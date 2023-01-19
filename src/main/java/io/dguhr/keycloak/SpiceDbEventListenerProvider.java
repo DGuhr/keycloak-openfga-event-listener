@@ -3,7 +3,6 @@ package io.dguhr.keycloak;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dguhr.keycloak.service.ServiceHandler;
 import io.dguhr.keycloak.event.SpiceDbEventParser;
-import io.dguhr.keycloak.model.AuthorizationModel;
 import org.jboss.logging.Logger;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
@@ -16,7 +15,7 @@ public class SpiceDbEventListenerProvider implements EventListenerProvider {
 	private ServiceHandler service;
 	private KeycloakSession session;
 
-	public SpiceDbEventListenerProvider(AuthorizationModel model, ServiceHandler service, KeycloakSession session) {
+	public SpiceDbEventListenerProvider(ServiceHandler service, KeycloakSession session) {
 		LOG.info("[SpiceDbEventListener] SpiceDbEventListenerProvider initializing...");
 		this.service = service;
 		this.session = session;

@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.dguhr.keycloak.model.OpenFgaTupleEvent;
 import io.grpc.ManagedChannelBuilder;
 import org.jboss.logging.Logger;
 import org.keycloak.events.admin.AdminEvent;
@@ -31,10 +30,6 @@ public class SpiceDbEventParser {
     private KeycloakSession session;
 
     private static final Logger logger = Logger.getLogger(SpiceDbEventParser.class);
-
-    public SpiceDbEventParser(AdminEvent event) {
-        this.event = event;
-    }
 
     public SpiceDbEventParser(AdminEvent event, KeycloakSession session) {
         this.event = event;
@@ -58,15 +53,15 @@ public class SpiceDbEventParser {
 
         // Get all the required information from the KC event
         String evtObjType = getEventObjectType();
-        String evtUserType = getEventUserType();
-        String evtUserId = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId();
+        String evtUserType = getEventUserType(); //rm
+        String evtUserId = evtUserType.equals(OBJECT_TYPE_ROLE) ? findRoleNameInRealm(getEventUserId()) : getEventUserId(); //rm
         String evtObjectId = getEventObjectName();
-        String evtOrgId = findOrgIdOfUserId(evtUserId);
+        String evtOrgId = getOrgIdByUserId(evtUserId);
 
         logger.info("[SpiceDbEventListener] TYPE OF EVENT IS: " + event.getResourceTypeAsString());
         logger.info("[SpiceDbEventListener] ORG ID FOR USER IN EVENT IS: " + evtOrgId);
         logger.info("[SpiceDbEventListener] EVENTS definition IS: " + evtObjType);
-        logger.info("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
+        //logger.info("[SpiceDbEventListener] EVENTS user type IS: " + evtUserType);
         logger.info("[SpiceDbEventListener] EVENTS user ID IS: " + evtUserId);
         logger.info("[SpiceDbEventListener] EVENTS group value ID IS: " + evtObjectId);
         logger.info("[SpiceDbEventListener] EVENT representation is: " + event.getRepresentation());
@@ -91,8 +86,12 @@ public class SpiceDbEventParser {
 
         SchemaServiceOuterClass.ReadSchemaResponse schemaResponse = getOrCreateSchema(schemaService); //TODO refactor, maybe idempotent updates are a thing
 
-        UserModel user = session.users().getUserById(session.getContext().getRealm(), evtUserId);
+        UserModel user = getUserByUserId(evtUserId);
 
+        return writeSpiceDbRelationship(evtUserId, evtObjectId, permissionService, user);
+    }
+
+    private static String writeSpiceDbRelationship(String evtUserId, String evtObjectId, PermissionsServiceGrpc.PermissionsServiceBlockingStub permissionService, UserModel user) {
         PermissionService.WriteRelationshipsRequest req = PermissionService.WriteRelationshipsRequest.newBuilder().addUpdates(
                         Core.RelationshipUpdate.newBuilder()
                                 .setOperation(Core.RelationshipUpdate.Operation.OPERATION_CREATE)
@@ -186,11 +185,10 @@ public class SpiceDbEventParser {
         }
     }
 
-    public String findOrgIdOfUserId(String userId) {
+    public String getOrgIdByUserId(String userId) {
         logger.info("Searching org_id for userId: " + userId);
-        String orgId = session.users().getUserById(session.getContext().getRealm(), userId).getFirstAttribute("org_id");
+        String orgId = getUserByUserId(userId).getFirstAttribute("org_id");
         logger.info("Found org_id: " + orgId + " for userId: " + userId);
-
         return orgId;
     }
 
@@ -215,16 +213,16 @@ public class SpiceDbEventParser {
     }
 
     /**
-     * //TODO: rename + extend for update cases?
+     * //TODO: eval + ext
      *
      * @return
      */
     public String getEventOperation() {
         switch (event.getOperationType()) {
             case CREATE:
-                return OpenFgaTupleEvent.OPERATION_WRITES;
+                return "writes";
             case DELETE:
-                return OpenFgaTupleEvent.OPERATION_DELETES;
+                return "deletes";
             default:
                 logger.info("Event is not handled, id:" + event.getId() + " resource name: " + event.getResourceType().name());
                 return "";
@@ -233,6 +231,10 @@ public class SpiceDbEventParser {
 
     public String getEventAuthenticatedUserId() {
         return this.event.getAuthDetails().getUserId();
+    }
+
+    public UserModel getUserByUserId(String userId) {
+        return session.users().getUserById(session.getContext().getRealm(), userId);
     }
 
     public String getEventUserId() {
@@ -265,7 +267,7 @@ public class SpiceDbEventParser {
 
     private String getObjectByAttributeName(String attributeName) {
         ObjectMapper mapper = new ObjectMapper();
-        String representation = event.getRepresentation().replaceAll("\\\\", ""); // Fixme: I should try to avoid the replace
+        String representation = event.getRepresentation().replaceAll("\\\\", "");
         try {
             JsonNode jsonNode = mapper.readTree(representation);
             if (jsonNode.isArray()) {
@@ -273,7 +275,7 @@ public class SpiceDbEventParser {
             }
             return jsonNode.get(attributeName).asText();
         } catch (JsonMappingException e) {
-            throw new RuntimeException(e); // Fixme: Improve exception handling
+            throw new RuntimeException(e);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
